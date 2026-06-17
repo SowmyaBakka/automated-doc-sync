@@ -86,11 +86,12 @@ Justification:
 ## GitHub Actions Workflow Structure
 - Job: `sync-docs-to-gh-pages`
 - Runner: `ubuntu-latest`
+- Concurrency: single in-flight run per branch using a workflow concurrency group (cancel older in-progress runs on newer pushes).
 - Permissions:
 - `contents: write` (required for `gh-pages` push)
 
 Steps:
-1. `actions/checkout` for `main` with sufficient fetch depth for diff.
+1. `actions/checkout` for `main` with bounded fetch depth (target `fetch-depth: 2`) for incremental diff.
 2. Setup Python runtime.
 3. Fetch `gh-pages` branch and prepare publish worktree.
 4. Run Python sync script:
@@ -103,12 +104,32 @@ Steps:
 6. Emit summary to workflow summary output.
 7. Exit non-zero if any file operation failed.
 
+Edge-case handling in workflow:
+- If `gh-pages` does not exist yet, create an orphan `gh-pages` branch and apply only the in-scope changed markdown operations for that run.
+- If previous commit baseline is unavailable (for example, first push or shallow-history edge case), compare `HEAD` with its direct parent when available; otherwise, use the event payload commit range.
+- If commit/push to `gh-pages` fails, classify that as a publish-stage failure and include it in the final summary before failing the job.
+
+## Requirements Traceability Matrix
+
+| Requirement | Architectural coverage |
+| --- | --- |
+| FR-1 | Workflow trigger on push to `main` in workflow structure and data flow step 1. |
+| FR-2, FR-3, FR-4 | Scope Filter rules in data flow step 4 and component responsibilities. |
+| FR-5, NFR-4 | Incremental git delta detection and bounded operation planning; no full rebuild path. |
+| FR-6, FR-7, FR-8 | `GhPagesAdapter` publish target, mirrored path mapping, and delete operations. |
+| FR-9, FR-10, FR-11, NFR-2 | Best-effort operation executor, aggregated summary reporter, end-of-run failure controller. |
+| FR-12, NFR-1 | `GITHUB_TOKEN` only with `contents: write`; no external secrets. |
+| NFR-3 | No-op when no in-scope changes and no effective destination diff. |
+| NFR-5 | Workflow-as-code in repository with adapter extension model. |
+
 ## Performance and Scalability Design
 - Incremental-by-default: no full rebuild path in normal operation.
 - Single-pass filtering and planning over changed set.
 - Bounded file operations aligned to changed set size, not total repository size.
 - Supports repos up to 1 GB and up to 500 markdown files under a 5-minute runtime target by minimizing checkout and copy scope.
 - Avoids unnecessary commits when no effective content changes are detected.
+- Runtime guardrails: fail fast when runtime exceeds an explicit workflow timeout budget and surface timeout reason in summary.
+- Optional optimization: enable sparse checkout paths (`*.md` at root and `docs/**`) when repository layout permits, to reduce checkout and I/O cost.
 
 ## Reliability and Failure Model
 - Best-effort per-file processing across the full operation set.
@@ -120,3 +141,4 @@ Steps:
 - Uses only `GITHUB_TOKEN`.
 - No PATs, deploy keys, or external secrets.
 - No external sync services.
+- Uses least-privilege workflow permissions with `contents: write` only for publish operations.
