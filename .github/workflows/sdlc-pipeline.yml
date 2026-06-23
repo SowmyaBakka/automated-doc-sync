@@ -1,0 +1,250 @@
+name: SDLC Pipeline Automation
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+
+jobs:
+  sdlc-pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository with full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history needed for task counting
+
+      - name: Extract commit message and issue key
+        id: commit
+        run: |
+          MSG=$(git log -1 --pretty=%B)
+          echo "message=$MSG" >> $GITHUB_OUTPUT
+          
+          ISSUE_KEY=$(echo "$MSG" | grep -oP 'for \K[A-Z]+-[0-9]+' | head -1)
+          echo "issue_key=$ISSUE_KEY" >> $GITHUB_OUTPUT
+
+      - name: Validate issue key extracted
+        run: |
+          ISSUE_KEY="${{ steps.commit.outputs.issue_key }}"
+          if [ -z "$ISSUE_KEY" ]; then
+            echo "❌ Failed to extract ISSUE_KEY from commit message"
+            echo "Expected format: 'feat: add requirements for SCRUM-9'"
+            exit 1
+          fi
+          echo "✅ Issue Key: $ISSUE_KEY"
+
+      - name: Count completed implementation tasks
+        id: task-count
+        run: |
+          ISSUE_KEY="${{ steps.commit.outputs.issue_key }}"
+          
+          # Count total tasks in impl-plan
+          if [ -f ".sdlc/$ISSUE_KEY/impl-plan.md" ]; then
+            TOTAL=$(grep -c '^- TASK-' .sdlc/$ISSUE_KEY/impl-plan.md || echo 0)
+          else
+            TOTAL=0
+          fi
+          
+          # Count completed tasks from git log
+          DONE=$(git log --oneline --all | grep -c "feat: implement TASK-" || echo 0)
+          
+          echo "total_tasks=$TOTAL" >> $GITHUB_OUTPUT
+          echo "completed_tasks=$DONE" >> $GITHUB_OUTPUT
+          echo "📊 Tasks: $DONE/$TOTAL completed"
+
+      - name: Determine pipeline stage
+        id: stage
+        run: |
+          MSG="${{ steps.commit.outputs.message }}"
+          ISSUE_KEY="${{ steps.commit.outputs.issue_key }}"
+          TOTAL="${{ steps.task-count.outputs.total_tasks }}"
+          DONE="${{ steps.task-count.outputs.completed_tasks }}"
+
+          if echo "$MSG" | grep -q "feat: add requirements for"; then
+            echo "current=✅ Step 1: Requirements Complete" >> $GITHUB_OUTPUT
+            echo "next=▶️ Run @sdlc-architecture-agent — Design the architecture for $ISSUE_KEY" >> $GITHUB_OUTPUT
+            echo "step=1" >> $GITHUB_OUTPUT
+
+          elif echo "$MSG" | grep -q "feat: add architecture for"; then
+            echo "current=✅ Step 2: Architecture Complete" >> $GITHUB_OUTPUT
+            echo "next=▶️ Run @sdlc-design-review-agent — Review the architecture for $ISSUE_KEY" >> $GITHUB_OUTPUT
+            echo "step=2" >> $GITHUB_OUTPUT
+
+          elif echo "$MSG" | grep -q "feat: add design review for"; then
+            echo "current=✅ Step 3: Design Review Complete" >> $GITHUB_OUTPUT
+            echo "next=▶️ Run @sdlc-impl-plan-agent — Generate the implementation plan for $ISSUE_KEY" >> $GITHUB_OUTPUT
+            echo "step=3" >> $GITHUB_OUTPUT
+
+          elif echo "$MSG" | grep -q "feat: add implementation plan for"; then
+            echo "current=✅ Step 4: Implementation Plan Complete" >> $GITHUB_OUTPUT
+            echo "next=▶️ Run @sdlc-implementation-agent — Implement $ISSUE_KEY" >> $GITHUB_OUTPUT
+            echo "step=4" >> $GITHUB_OUTPUT
+
+          elif echo "$MSG" | grep -q "feat: implement TASK-"; then
+            # Only advance to code review if ALL tasks are complete
+            if [ "$DONE" -ge "$TOTAL" ] && [ "$TOTAL" -gt 0 ]; then
+              echo "current=✅ Step 5: All Implementation Tasks Complete ($DONE/$TOTAL)" >> $GITHUB_OUTPUT
+              echo "next=▶️ Run @sdlc-code-review-agent — Review the implementation for $ISSUE_KEY" >> $GITHUB_OUTPUT
+              echo "step=5" >> $GITHUB_OUTPUT
+            else
+              echo "current=🔄 Step 5: Implementing ($DONE/$TOTAL tasks done)" >> $GITHUB_OUTPUT
+              echo "next=⏳ Continue implementing remaining tasks for $ISSUE_KEY" >> $GITHUB_OUTPUT
+              echo "step=5-incomplete" >> $GITHUB_OUTPUT
+            fi
+
+          elif echo "$MSG" | grep -q "feat: add code review for"; then
+            echo "current=✅ Step 6: Code Review Complete" >> $GITHUB_OUTPUT
+            echo "next=▶️ Run @sdlc-verify-agent — Verify the implementation for $ISSUE_KEY" >> $GITHUB_OUTPUT
+            echo "step=6" >> $GITHUB_OUTPUT
+
+          elif echo "$MSG" | grep -q "feat: add verification report for"; then
+            echo "current=✅ Step 7: Verification Complete" >> $GITHUB_OUTPUT
+            echo "next=▶️ Run @sdlc-pr-agent — Raise the PR for $ISSUE_KEY" >> $GITHUB_OUTPUT
+            echo "step=7" >> $GITHUB_OUTPUT
+
+          elif echo "$MSG" | grep -q "feat: add PR description"; then
+            echo "current=✅ Step 8: PR Complete" >> $GITHUB_OUTPUT
+            echo "next=🎉 SDLC Pipeline Complete for $ISSUE_KEY!" >> $GITHUB_OUTPUT
+            echo "step=8" >> $GITHUB_OUTPUT
+
+          else
+            echo "step=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post pipeline status to PR
+        if: steps.stage.outputs.step != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const current = `${{ steps.stage.outputs.current }}`;
+            const next = `${{ steps.stage.outputs.next }}`;
+            const issueKey = `${{ steps.commit.outputs.issue_key }}`;
+            const step = `${{ steps.stage.outputs.step }}`;
+            const completedTasks = `${{ steps.task-count.outputs.completed_tasks }}`;
+            const totalTasks = `${{ steps.task-count.outputs.total_tasks }}`;
+
+            const stepMap = {
+              '1': '✅ Step 1: Requirements',
+              '2': '✅ Step 2: Architecture',
+              '3': '✅ Step 3: Design Review',
+              '4': '✅ Step 4: Implementation Plan',
+              '5': '✅ Step 5: Implementation',
+              '5-incomplete': `🔄 Step 5: Implementation (${completedTasks}/${totalTasks})`,
+              '6': '✅ Step 6: Code Review',
+              '7': '✅ Step 7: Verification',
+              '8': '✅ Step 8: PR'
+            };
+
+            const stepNum = parseInt(step) || 0;
+            const steps = [
+              '⬜ Step 1: Requirements',
+              '⬜ Step 2: Architecture',
+              '⬜ Step 3: Design Review',
+              '⬜ Step 4: Implementation Plan',
+              '⬜ Step 5: Implementation',
+              '⬜ Step 6: Code Review',
+              '⬜ Step 7: Verification',
+              '⬜ Step 8: PR'
+            ];
+
+            // Mark completed steps
+            for (let i = 0; i < stepNum; i++) {
+              steps[i] = steps[i].replace('⬜', '✅');
+            }
+            
+            // Mark current step
+            if (step === '5-incomplete') {
+              steps[4] = `🔄 Step 5: Implementation (${completedTasks}/${totalTasks})`;
+            } else if (stepNum > 0 && stepNum <= 8) {
+              steps[stepNum - 1] = stepMap[step];
+            }
+
+            const pipeline = steps.join('\n');
+
+            const body = [
+              '## 🤖 SDLC Pipeline Status',
+              '',
+              `**Story:** \`${issueKey}\``,
+              `**${current}**`,
+              '',
+              '### 📊 Pipeline Progress',
+              '```',
+              pipeline,
+              '```',
+              '',
+              '### ▶️ Next Step',
+              next,
+              '',
+              '---',
+              '*Automated by SDLC Pipeline · GitHub Actions*'
+            ].join('\n');
+
+            // Create commit status check
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: 'success',
+              description: current.substring(0, 140),
+              context: 'SDLC Pipeline'
+            });
+
+            // Find open PR for this branch
+            const branchName = context.ref.replace('refs/heads/', '');
+            const prs = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              head: `${context.repo.owner}:${branchName}`
+            });
+
+            if (prs.data.length > 0) {
+              const prNumber = prs.data[0].number;
+              
+              // Check if status comment already exists
+              const comments = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber
+              });
+
+              const statusComment = comments.data.find(c =>
+                c.user.type === 'Bot' && c.body.includes('SDLC Pipeline Status')
+              );
+
+              if (statusComment) {
+                // Update existing comment
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: statusComment.id,
+                  body: body
+                });
+                console.log('✅ Updated pipeline status comment');
+              } else {
+                // Create new comment
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                  body: body
+                });
+                console.log('✅ Created new pipeline status comment');
+              }
+            } else {
+              console.log('ℹ️ No open PR found for this branch');
+            }
+
+            console.log(body);
+
+      - name: Debug output
+        if: always()
+        run: |
+          echo "=== Pipeline Debug Info ==="
+          echo "Step: ${{ steps.stage.outputs.step }}"
+          echo "Current: ${{ steps.stage.outputs.current }}"
+          echo "Next: ${{ steps.stage.outputs.next }}"
+          echo "Issue Key: ${{ steps.commit.outputs.issue_key }}"
+          echo "Completed Tasks: ${{ steps.task-count.outputs.completed_tasks }}/${{ steps.task-count.outputs.total_tasks }}"
+          echo "Message: ${{ steps.commit.outputs.message }}"
