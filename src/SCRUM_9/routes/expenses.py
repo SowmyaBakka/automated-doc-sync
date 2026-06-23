@@ -9,7 +9,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import ValidationError
 
-from src.SCRUM_9.models.expense import ExpenseCreate, ExpenseItem
+from src.SCRUM_9.models.expense import CategorySummary, ExpenseCreate, ExpenseItem
 from src.SCRUM_9.services.expense_service import ExpenseService
 from src.SCRUM_9.store.json_store import JsonStore
 
@@ -66,3 +66,15 @@ async def list_expenses(category: str | None = Query(default=None)) -> list[Expe
     service = _get_service()
     expenses = await service.list_expenses(category=category)
     return [ExpenseItem.model_validate(item) for item in expenses]
+
+
+@router.get(
+    "/summary/categories",
+    response_model=CategorySummary,
+    status_code=status.HTTP_200_OK,
+)
+async def get_category_summary() -> CategorySummary:
+    """Return Decimal-safe aggregated totals by category."""
+    service = _get_service()
+    totals = await service.summarize_by_category()
+    return CategorySummary(totals=totals)
