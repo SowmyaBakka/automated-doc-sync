@@ -9,7 +9,8 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, status
 from pydantic import ValidationError
 
-from src.SCRUM_9.models.expense import ExpenseCreate
+from src.SCRUM_9.models.expense import ExpenseCreate, ExpenseItem
+from src.SCRUM_9.services.expense_service import ExpenseService
 from src.SCRUM_9.store.json_store import JsonStore
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
@@ -23,6 +24,16 @@ def set_store(store: JsonStore) -> None:
     _store = store
 
 
+def _get_service() -> ExpenseService:
+    """Build a service instance for the configured store."""
+    if _store is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Store not initialized",
+        )
+    return ExpenseService(_store)
+
+
 def validate_create_payload(payload: dict[str, Any]) -> ExpenseCreate:
     """Validate create-expense payload and map failures to HTTP 400."""
     try:
@@ -32,3 +43,18 @@ def validate_create_payload(payload: dict[str, Any]) -> ExpenseCreate:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=exc.errors(),
         ) from exc
+
+
+@router.post("", response_model=ExpenseItem, status_code=status.HTTP_201_CREATED)
+async def create_expense(raw_payload: Any) -> ExpenseItem:
+    """Create and persist an expense."""
+    if not isinstance(raw_payload, dict):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="request body must be a JSON object",
+        )
+
+    payload = validate_create_payload(raw_payload)
+    service = _get_service()
+    created = await service.add_expense(payload)
+    return ExpenseItem.model_validate(created)
