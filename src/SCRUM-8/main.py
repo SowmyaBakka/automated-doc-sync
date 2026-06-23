@@ -9,8 +9,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from src.routes.todos import router as todos_router, set_store
-from src.store.json_store import JsonStore
+from src.SCRUM_8.routes.todos import router as todos_router, set_store
+from src.SCRUM_8.store.json_store import JsonStore
 
 # Global store instance
 store = JsonStore()

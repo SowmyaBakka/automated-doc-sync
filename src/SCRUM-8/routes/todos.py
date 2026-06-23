@@ -7,8 +7,8 @@ Defines three endpoints:
 """
 
 from fastapi import APIRouter, HTTPException, status
-from src.models.todo import TodoCreate, TodoItem
-from src.store.json_store import JsonStore
+from src.SCRUM-8.models.todo import TodoCreate, TodoItem
+from src.SCRUM-8.store.json_store import JsonStore
 
 router = APIRouter(prefix="/todos", tags=["todos"])
 
