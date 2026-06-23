@@ -27,6 +27,7 @@ class JsonStore:
     def __init__(self, file_path: str) -> None:
         self._file_path = Path(file_path)
         self._items: list[dict[str, Any]] = []
+        self._loaded = False
 
     @property
     def file_path(self) -> Path:
@@ -41,6 +42,7 @@ class JsonStore:
         """
         if not self._file_path.exists():
             self._items = []
+            self._loaded = True
             return
 
         try:
@@ -50,6 +52,7 @@ class JsonStore:
 
         if not content:
             self._items = []
+            self._loaded = True
             return
 
         try:
@@ -61,16 +64,25 @@ class JsonStore:
             raise JsonStoreCorruptedDataError("JSON storage root must be a list")
 
         self._items = data
+        self._loaded = True
+
+    async def _ensure_loaded(self) -> None:
+        """Load persisted data lazily on first access."""
+        if not self._loaded:
+            await self.load()
 
     async def get_all(self) -> list[dict[str, Any]]:
         """Return a shallow copy of all currently loaded items."""
+        await self._ensure_loaded()
         return [item.copy() for item in self._items]
 
     async def save_all(self, items: list[dict[str, Any]]) -> None:
         """Persist a full collection to disk and update in-memory state."""
+        await self._ensure_loaded()
         payload = [item.copy() for item in items]
         self._write_payload(payload)
         self._items = payload
+        self._loaded = True
 
     def _write_payload(self, payload: list[dict[str, Any]]) -> None:
         """Write payload to storage file and propagate write failures."""
