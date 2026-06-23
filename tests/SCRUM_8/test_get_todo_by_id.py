@@ -2,15 +2,41 @@
 
 import pytest
 from fastapi.testclient import TestClient
+import tempfile
+from pathlib import Path
 
-from src.SCRUM_8.main import app
+from src.SCRUM_8.main import app, store
 
 
-@pytest.mark.asyncio
-async def test_get_todo_by_valid_id_returns_200():
-    """Test GET /todos/{id} with valid id returns 200 + correct TodoItem."""
+@pytest.fixture
+def client():
+    """Provide a TestClient for the FastAPI app with initialized store."""
+    # Use a temporary file for testing
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        temp_file = f.name
+        f.write('[]')
+    
+    # Recreate store with temp file
+    test_store = store.__class__(temp_file)
+    
+    # Setup: initialize
+    import asyncio
+    asyncio.run(test_store.load())
+    
+    # Inject into router
+    from src.SCRUM_8.routes.todos import set_store
+    set_store(test_store)
+    
     client = TestClient(app)
     
+    yield client
+    
+    # Cleanup
+    Path(temp_file).unlink(missing_ok=True)
+
+
+def test_get_todo_by_valid_id_returns_200(client):
+    """Test GET /todos/{id} with valid id returns 200 + correct TodoItem."""
     # Create an item
     create_response = client.post(
         "/todos",
@@ -33,11 +59,8 @@ async def test_get_todo_by_valid_id_returns_200():
     assert "createdAt" in data
 
 
-@pytest.mark.asyncio
-async def test_get_todo_by_unknown_id_returns_404():
+def test_get_todo_by_unknown_id_returns_404(client):
     """Test GET /todos/{id} with unknown id returns 404."""
-    client = TestClient(app)
-    
     response = client.get("/todos/999999999")
     
     assert response.status_code == 404

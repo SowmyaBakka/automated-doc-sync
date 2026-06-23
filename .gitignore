@@ -1,1 +1,4 @@
 **/mcp.json
+
+# Runtime data files (story-scoped)
+src/*/todos.json
