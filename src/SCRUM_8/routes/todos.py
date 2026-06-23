@@ -6,7 +6,9 @@ Defines three endpoints:
 - GET /todos/{id} — retrieve a single to-do item by ID
 """
 
-from fastapi import APIRouter, HTTPException, status
+from typing import Union
+
+from fastapi import APIRouter, HTTPException, Response, status
 from ..models.todo import TodoCreate, TodoItem
 from ..store.json_store import JsonStore
 
@@ -57,12 +59,13 @@ async def create_todo(todo_create: TodoCreate) -> TodoItem:
     return TodoItem(**created_item)
 
 
-@router.get("", response_model=list[TodoItem])
-async def get_todos() -> list[TodoItem]:
+@router.get("", response_model=None)
+async def get_todos() -> Union[Response, list[TodoItem]]:
     """Retrieve all to-do items.
     
     Returns:
-        List of all to-do items (may be empty).
+        - 204 No Content if store is empty (per FR-4)
+        - 200 OK with list of TodoItem if items exist
     """
     if not _store:
         raise HTTPException(
@@ -72,7 +75,11 @@ async def get_todos() -> list[TodoItem]:
     
     items = await _store.get_all()
     
-    # Convert each item to Pydantic model
+    # FR-4: Return 204 No Content if no items exist
+    if not items:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    
+    # Convert each item to Pydantic model and return with 200 OK
     return [TodoItem(**item) for item in items]
 
 

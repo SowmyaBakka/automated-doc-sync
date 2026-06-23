@@ -35,14 +35,12 @@ def client():
     Path(temp_file).unlink(missing_ok=True)
 
 
-def test_get_todos_empty_store_returns_200_with_empty_list(client):
-    """Test GET /todos on empty store returns 200 with []."""
+def test_get_todos_empty_store_returns_204(client):
+    """Test GET /todos on empty store returns 204 No Content (FR-4)."""
     response = client.get("/todos")
     
-    assert response.status_code == 200
-    data = response.json()
-    assert isinstance(data, list)
-    assert len(data) == 0
+    assert response.status_code == 204  # No Content per FR-4
+    # 204 responses have no body
 
 
 def test_get_todos_after_creating_items(client):
