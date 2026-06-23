@@ -32,8 +32,8 @@ graph TD
 |-----------|------|----------------|
 | **FastAPI App** | `main.py` | Initialises the application, loads the JSON store at startup, mounts the router. |
 | **Todos Router** | `routes/todos.py` | Defines the three endpoints (`POST /todos`, `GET /todos`, `GET /todos/:id`), validates input, delegates to the store, and returns correct HTTP status codes. |
-| **Pydantic Models** | `models/todo.py` | Declares `TodoCreate` (request body) and `TodoItem` (response schema) with field types and defaults. |
-| **JSON File Store** | `store/json_store.py` | Reads `todos.json` into an in-memory list at startup; exposes `get_all()`, `get_by_id()`, and `add()` methods; writes back to disk after every mutation. |
+| **Pydantic Models** | `models/todo.py` | Declares `TodoCreate` (request body — excludes `done`, which is hardcoded to `False` in the store) and `TodoItem` (response schema) with field types and defaults. |
+| **JSON File Store** | `store/json_store.py` | Reads `todos.json` into an in-memory list at startup; exposes `get_all()`, `get_by_id()`, and `add()` methods; writes back to disk after every mutation. An `asyncio.Lock()` guards all read-modify-write operations to prevent concurrent-write data loss. The `add()` method checks for timestamp ID collisions and increments the ID by 1 until unique. |
 | **todos.json** | `todos.json` | Flat JSON array on disk acting as the persistent data store. |
 | **requirements.txt** | `requirements.txt` | Pins `fastapi`, `uvicorn[standard]`, and any other runtime dependencies. |
 
@@ -58,7 +58,7 @@ graph TD
 | Method | Path | Request Body | Success Response | Error Responses |
 |--------|------|-------------|-----------------|-----------------|
 | `POST` | `/todos` | `{ "title": string (required), "description": string (optional) }` | `201 Created` — full `TodoItem` | `400` if `title` missing/empty |
-| `GET` | `/todos` | — | `200 OK` — array of `TodoItem` | `204 No Content` if list is empty |
+| `GET` | `/todos` | — | `200 OK` — array of `TodoItem` (or `[]` if empty) | — |
 | `GET` | `/todos/{id}` | — | `200 OK` — single `TodoItem` | `404 Not Found` if id unknown |
 
 ### TodoItem Schema
@@ -74,8 +74,16 @@ graph TD
 ```
 
 - `id` — milliseconds since Unix epoch at creation time (int).
-- `done` — always `false` at creation (update endpoint is out of scope).
+- `done` — always `false` at creation; excluded from `TodoCreate` and hardcoded to `False` in `add()` (update endpoint is out of scope).
 - `createdAt` — ISO 8601 UTC timestamp.
+
+### Error Response Schema
+
+All error responses (`400`, `404`) use FastAPI's standard shape:
+
+```json
+{ "detail": "<descriptive error message>" }
+```
 
 ---
 
@@ -100,7 +108,7 @@ sequenceDiagram
     C->>R: GET /todos
     R->>S: get_all()
     S-->>R: [] or [TodoItem, …]
-    R-->>C: 200 OK (list) or 204 No Content
+    R-->>C: 200 OK with [] or [TodoItem, …]
 
     C->>R: GET /todos/{id}
     R->>S: get_by_id(id)
