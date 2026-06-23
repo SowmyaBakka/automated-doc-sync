@@ -6,7 +6,7 @@ import pytest
 import tempfile
 from pathlib import Path
 
-from src.store.json_store import JsonStore
+from src.SCRUM_8.store.json_store import JsonStore
 
 
 @pytest.fixture
