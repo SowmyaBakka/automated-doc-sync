@@ -27,6 +27,8 @@ flowchart LR
 - Validation Layer
   - Validates required fields: amount, category, date for create requests.
   - Enforces type/format checks and rejects invalid payloads with 400 responses.
+  - Enforces domain constraints: amount must be positive and category must be non-empty.
+  - Enforces date format policy (ISO-8601 date string: YYYY-MM-DD).
 
 - Expense Service Logic
   - Coordinates business operations:
@@ -35,6 +37,7 @@ flowchart LR
     - Retrieve expenses filtered by category.
     - Compute category summary totals.
   - Keeps route handlers thin and reusable.
+  - Uses decimal-safe amount handling for aggregation correctness.
 
 - JSON Store Adapter
   - Provides read/write operations against a single JSON file.
@@ -42,6 +45,16 @@ flowchart LR
 
 - Response Mapper
   - Produces stable JSON response shapes for list and summary endpoints.
+
+## Functional requirements traceability
+
+| Requirement | Architecture component(s) | Notes |
+|---|---|---|
+| FR-1 Add Expense | Expense Routes Controller, Validation Layer, Expense Service Logic, JSON Store Adapter | POST flow validates payload, assigns id, and persists to JSON |
+| FR-2 List All Expenses | Expense Routes Controller, Expense Service Logic, JSON Store Adapter, Response Mapper | GET list reads all records and returns normalized response |
+| FR-3 Filter by Category | Expense Routes Controller, Expense Service Logic, Response Mapper | Category query parameter is parsed and applied in service logic |
+| FR-4 Category Summary | Expense Routes Controller, Expense Service Logic, Response Mapper | Dedicated summary endpoint computes totals by category |
+| FR-5 Data Persistence | JSON Store Adapter, expenses.json | Store abstraction handles durable file read/write |
 
 ## Technology choices with justification
 
@@ -121,6 +134,24 @@ sequenceDiagram
 - Do not store secrets in code or JSON data files.
 - Return clear but non-sensitive validation errors; avoid exposing internal stack traces in API responses.
 
+## Error handling strategy
+
+- Validation failures
+  - Return 400 with structured validation details.
+
+- File-not-found behavior
+  - If storage file is absent on first run, initialize empty collection and proceed.
+
+- Corrupted JSON handling
+  - Treat unreadable JSON as a recoverable server fault and return 500 with generic error message.
+  - Log internal parse detail server-side only.
+
+- Write failures
+  - Return 500 when persistence write fails; do not return partial success.
+
+- Unknown failures
+  - Use global exception handling to return sanitized 500 responses.
+
 ## Performance and scalability design
 
 - Current target
@@ -129,6 +160,7 @@ sequenceDiagram
 - Performance characteristics
   - Read operations are O(n) for list/filter and O(n) for category aggregation.
   - Write operations rewrite the full JSON file; acceptable for MVP data sizes.
+  - Amount calculations should use decimal-safe arithmetic to avoid floating-point drift.
 
 - Scalability path
   - Introduce database persistence and indexed queries when data volume or concurrent writes increase.
