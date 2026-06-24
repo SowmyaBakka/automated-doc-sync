@@ -16,13 +16,30 @@ from src.SCRUM_9.routes.expenses import set_store
 from src.SCRUM_9.store.json_store import JsonStore
 
 
+class StoreBoundClient:
+    """Thin wrapper that re-injects the correct store before each request."""
+
+    def __init__(self, client: TestClient, store: JsonStore) -> None:
+        self._client = client
+        self.test_store = store
+
+    def request(self, method: str, url: str, **kwargs):
+        set_store(self.test_store)
+        return self._client.request(method, url, **kwargs)
+
+    def get(self, url: str, **kwargs):
+        return self.request("GET", url, **kwargs)
+
+    def post(self, url: str, **kwargs):
+        return self.request("POST", url, **kwargs)
+
+
 def _build_client_for_path(file_path: str) -> TestClient:
     """Create a test client bound to a specific storage file path."""
     test_store = JsonStore(file_path)
     set_store(test_store)
     client = TestClient(app)
-    client.test_store = test_store
-    return client
+    return StoreBoundClient(client, test_store)
 
 
 @pytest.fixture
