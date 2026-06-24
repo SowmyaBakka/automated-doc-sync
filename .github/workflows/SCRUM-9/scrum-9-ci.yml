@@ -1,0 +1,38 @@
+name: SCRUM-9 CI
+
+on:
+  push:
+    branches:
+      - feature/scrum-9
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/SCRUM_9/**'
+      - 'tests/SCRUM_9/**'
+      - 'docs/SCRUM-9/**'
+      - '.github/workflows/SCRUM-9/**'
+
+jobs:
+  test-scrum-9:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install SCRUM-9 dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r src/SCRUM_9/requirements.txt
+          pip install -r src/SCRUM_9/requirements-dev.txt
+
+      - name: Run SCRUM-9 test suite
+        env:
+          PYTHONPATH: .
+        run: pytest tests/SCRUM_9 -q
