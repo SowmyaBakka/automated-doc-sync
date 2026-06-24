@@ -6,6 +6,7 @@ router wiring and dependency injection so the app starts cleanly.
 
 from typing import Any
 
+from fastapi.encoders import jsonable_encoder
 from fastapi import APIRouter, Body, HTTPException, Query, status
 from pydantic import ValidationError
 
@@ -41,7 +42,7 @@ def validate_create_payload(payload: dict[str, Any]) -> ExpenseCreate:
     except ValidationError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=exc.errors(),
+            detail=jsonable_encoder(exc.errors()),
         ) from exc
 
 
