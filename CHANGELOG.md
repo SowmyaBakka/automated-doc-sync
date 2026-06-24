@@ -17,17 +17,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `GET /expenses/summary/categories`
 - Strict request validation for positive amounts, non-empty trimmed categories, exact `YYYY-MM-DD` dates, and JSON-object request bodies
 - Decimal-safe expense service layer with category filtering and stable category summary aggregation
-- JSON file persistence with first-run empty initialization, corrupted-data detection, and explicit read/write fault contracts
+- JSON file persistence with first-run empty initialization, corrupted-data detection, explicit read/write fault contracts, async locking, and atomic mutation support
 - Centralized FastAPI error mapping for validation failures and sanitized `500` storage errors
-- SCRUM-9 test suite with 26 passing tests covering validation, service logic, happy paths, summary behavior, error handling, and fixture isolation
+- SCRUM-9 test suite with 27 passing tests covering validation, service logic, happy paths, summary behavior, error handling, fixture isolation, and concurrent-write regression coverage
 - Story-scoped GitHub Actions workflow in `.github/workflows/SCRUM-9/scrum-9-ci.yml`
 - SCRUM-9 usage and release documentation under `src/SCRUM_9/README.md` and `docs/SCRUM-9/README.md`
+
+### Changed
+
+- Category summary responses now return the direct category-to-total mapping defined by the approved architecture
+- Verification evidence for SCRUM-9 is recorded under `.sdlc/SCRUM-9/verify.md`
 
 ### Fixed
 
 - Bound `POST /expenses` payloads explicitly from the request body after happy-path integration testing exposed missing body binding
 - Normalized validation error details with JSON-safe encoding so `400` responses do not fail during serialization
 - Hardened test fixtures so each test client re-injects its own store, preventing cross-test contamination
+- Eliminated a concurrent create race by introducing store-level locking and atomic mutation flow
 
 ### Known Limitations
 
@@ -35,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **No Update/Delete:** Create and read only
 - **No Date Range Queries:** Category filtering only
 - **No Database Backend:** Single JSON file persistence only
+- **Test Warning:** One cosmetic Starlette deprecation warning remains in the verification run
 
 ---
 
