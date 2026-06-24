@@ -21,7 +21,7 @@ def test_get_category_summary_returns_decimal_safe_totals(expense_client) -> Non
     response = expense_client.get("/expenses/summary/categories")
 
     assert response.status_code == 200
-    assert response.json() == {"totals": {"food": "0.30", "travel": "1.25"}}
+    assert response.json() == {"food": "0.30", "travel": "1.25"}
 
 
 def test_post_expenses_invalid_payload_returns_400(expense_client) -> None:

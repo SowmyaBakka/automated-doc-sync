@@ -1,5 +1,6 @@
 """Unit tests for SCRUM-9 expense service behavior."""
 
+import asyncio
 from decimal import Decimal
 
 import pytest
@@ -62,3 +63,29 @@ async def test_list_expenses_applies_exact_category_filter(tmp_path) -> None:
 
     assert len(food_only) == 1
     assert food_only[0]["category"] == "food"
+
+
+@pytest.mark.asyncio
+async def test_concurrent_add_expense_calls_do_not_lose_items(tmp_path) -> None:
+    """Concurrent adds should persist every created expense without overwrites."""
+    store_file = tmp_path / "expenses.json"
+    store = JsonStore(str(store_file))
+    service = ExpenseService(store)
+
+    async def add_expense(index: int) -> dict:
+        return await service.add_expense(
+            ExpenseCreate.model_validate(
+                {
+                    "amount": f"{index + 1}.00",
+                    "category": "food",
+                    "date": "2026-06-24",
+                }
+            )
+        )
+
+    created = await asyncio.gather(*(add_expense(index) for index in range(10)))
+    stored = await service.list_expenses()
+
+    assert len(created) == 10
+    assert len(stored) == 10
+    assert sorted(item["id"] for item in stored) == list(range(1, 11))

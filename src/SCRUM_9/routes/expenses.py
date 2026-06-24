@@ -10,7 +10,9 @@ from fastapi.encoders import jsonable_encoder
 from fastapi import APIRouter, Body, HTTPException, Query, status
 from pydantic import ValidationError
 
-from src.SCRUM_9.models.expense import CategorySummary, ExpenseCreate, ExpenseItem
+from decimal import Decimal
+
+from src.SCRUM_9.models.expense import ExpenseCreate, ExpenseItem
 from src.SCRUM_9.services.expense_service import ExpenseService
 from src.SCRUM_9.store.json_store import JsonStore
 
@@ -71,11 +73,10 @@ async def list_expenses(category: str | None = Query(default=None)) -> list[Expe
 
 @router.get(
     "/summary/categories",
-    response_model=CategorySummary,
+    response_model=dict[str, Decimal],
     status_code=status.HTTP_200_OK,
 )
-async def get_category_summary() -> CategorySummary:
+async def get_category_summary() -> dict[str, Decimal]:
     """Return Decimal-safe aggregated totals by category."""
     service = _get_service()
-    totals = await service.summarize_by_category()
-    return CategorySummary(totals=totals)
+    return await service.summarize_by_category()

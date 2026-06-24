@@ -15,19 +15,18 @@ class ExpenseService:
 
     async def add_expense(self, payload: ExpenseCreate) -> dict[str, Any]:
         """Create and persist a new expense record."""
-        items = await self._store.get_all()
-        next_id = self._next_id(items)
+        def append_expense(items: list[dict[str, Any]]) -> dict[str, Any]:
+            next_id = self._next_id(items)
+            created = {
+                "id": next_id,
+                "amount": self._serialize_amount(payload.amount),
+                "category": payload.category,
+                "date": payload.date,
+            }
+            items.append(created)
+            return created
 
-        created = {
-            "id": next_id,
-            "amount": self._serialize_amount(payload.amount),
-            "category": payload.category,
-            "date": payload.date,
-        }
-
-        items.append(created)
-        await self._store.save_all(items)
-
+        created = await self._store.mutate(append_expense)
         return self._to_response(created)
 
     async def list_expenses(self, category: str | None = None) -> list[dict[str, Any]]:

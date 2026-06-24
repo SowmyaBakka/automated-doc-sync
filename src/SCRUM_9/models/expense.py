@@ -53,9 +53,3 @@ class ExpenseItem(BaseModel):
     amount: Decimal
     category: str
     date: str
-
-
-class CategorySummary(BaseModel):
-    """Response model for category totals."""
-
-    totals: dict[str, Decimal]

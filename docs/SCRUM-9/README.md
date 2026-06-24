@@ -41,10 +41,8 @@ Category summary:
 
 ```json
 {
-	"totals": {
-		"groceries": "12.50",
-		"travel": "8.25"
-	}
+	"groceries": "12.50",
+	"travel": "8.25"
 }
 ```
 

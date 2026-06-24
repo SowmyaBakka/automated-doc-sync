@@ -1,8 +1,11 @@
 """JSON file-backed storage adapter for SCRUM-9."""
 
+import asyncio
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, TypeVar
+
+T = TypeVar("T")
 
 
 class JsonStoreError(Exception):
@@ -28,6 +31,7 @@ class JsonStore:
         self._file_path = Path(file_path)
         self._items: list[dict[str, Any]] = []
         self._loaded = False
+        self._lock = asyncio.Lock()
 
     @property
     def file_path(self) -> Path:
@@ -73,16 +77,29 @@ class JsonStore:
 
     async def get_all(self) -> list[dict[str, Any]]:
         """Return a shallow copy of all currently loaded items."""
-        await self._ensure_loaded()
-        return [item.copy() for item in self._items]
+        async with self._lock:
+            await self._ensure_loaded()
+            return [item.copy() for item in self._items]
 
     async def save_all(self, items: list[dict[str, Any]]) -> None:
         """Persist a full collection to disk and update in-memory state."""
-        await self._ensure_loaded()
-        payload = [item.copy() for item in items]
-        self._write_payload(payload)
-        self._items = payload
-        self._loaded = True
+        async with self._lock:
+            await self._ensure_loaded()
+            payload = [item.copy() for item in items]
+            self._write_payload(payload)
+            self._items = payload
+            self._loaded = True
+
+    async def mutate(self, callback: Callable[[list[dict[str, Any]]], T]) -> T:
+        """Apply a callback to the loaded collection under a shared write lock."""
+        async with self._lock:
+            await self._ensure_loaded()
+            working_items = [item.copy() for item in self._items]
+            result = callback(working_items)
+            self._write_payload(working_items)
+            self._items = working_items
+            self._loaded = True
+            return result
 
     def _write_payload(self, payload: list[dict[str, Any]]) -> None:
         """Write payload to storage file and propagate write failures."""

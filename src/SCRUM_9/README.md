@@ -78,10 +78,8 @@ Example `200 OK` response:
 
 ```json
 {
-  "totals": {
-    "groceries": "12.50",
-    "travel": "8.25"
-  }
+  "groceries": "12.50",
+  "travel": "8.25"
 }
 ```
 
