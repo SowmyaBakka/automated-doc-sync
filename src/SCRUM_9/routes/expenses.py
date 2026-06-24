@@ -6,7 +6,7 @@ router wiring and dependency injection so the app starts cleanly.
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Body, HTTPException, Query, status
 from pydantic import ValidationError
 
 from src.SCRUM_9.models.expense import CategorySummary, ExpenseCreate, ExpenseItem
@@ -46,7 +46,7 @@ def validate_create_payload(payload: dict[str, Any]) -> ExpenseCreate:
 
 
 @router.post("", response_model=ExpenseItem, status_code=status.HTTP_201_CREATED)
-async def create_expense(raw_payload: Any) -> ExpenseItem:
+async def create_expense(raw_payload: Any = Body(...)) -> ExpenseItem:
     """Create and persist an expense."""
     if not isinstance(raw_payload, dict):
         raise HTTPException(
