@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "id": "requirements_to_architecture",
+      "triggerCommitRegex": "^feat: add requirements for (?<issue>[A-Z]+-\\d+)$",
+      "agent": "sdlc-architecture-agent",
+      "promptTemplate": "Design the architecture for {ISSUE_KEY}"
+    },
+    {
+      "id": "architecture_to_design_review",
+      "triggerCommitRegex": "^feat: add architecture for (?<issue>[A-Z]+-\\d+)$",
+      "agent": "sdlc-design-review-agent",
+      "promptTemplate": "Review the architecture for {ISSUE_KEY}"
+    },
+    {
+      "id": "design_review_to_impl_plan",
+      "triggerCommitRegex": "^feat: add design review for (?<issue>[A-Z]+-\\d+)$",
+      "agent": "sdlc-impl-plan-agent",
+      "promptTemplate": "Generate the implementation plan for {ISSUE_KEY}"
+    },
+    {
+      "id": "impl_plan_to_implementation",
+      "triggerCommitRegex": "^feat: add implementation plan for (?<issue>[A-Z]+-\\d+)$",
+      "agent": "sdlc-implementation-agent",
+      "promptTemplate": "Implement {ISSUE_KEY}"
+    },
+    {
+      "id": "implementation_to_code_review",
+      "triggerCommitRegex": "^feat: implement TASK-",
+      "agent": "sdlc-code-review-agent",
+      "promptTemplate": "Review the implementation for {ISSUE_KEY}",
+      "condition": "allTasksImplemented"
+    },
+    {
+      "id": "code_review_to_verify",
+      "triggerCommitRegex": "^feat: add code review for (?<issue>[A-Z]+-\\d+)$",
+      "agent": "sdlc-verify-agent",
+      "promptTemplate": "Verify the implementation for {ISSUE_KEY}"
+    },
+    {
+      "id": "verify_to_pr",
+      "triggerCommitRegex": "^feat: add verification report for (?<issue>[A-Z]+-\\d+)$",
+      "agent": "sdlc-pr-agent",
+      "promptTemplate": "Raise the PR for {ISSUE_KEY}"
+    }
+  ]
+}
