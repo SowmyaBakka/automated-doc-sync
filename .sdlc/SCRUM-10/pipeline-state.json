@@ -1,0 +1,11 @@
+{
+  "issueKey": "SCRUM-10",
+  "currentStage": "requirements",
+  "status": "completed",
+  "approved": true,
+  "lastAgent": "sdlc-requirements-agent",
+  "artifacts": {
+    "requirements": ".sdlc/SCRUM-10/requirements.md"
+  },
+  "updatedAt": "2026-07-25T14:59:05.4757815Z"
+}
