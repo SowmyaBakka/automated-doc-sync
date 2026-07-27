@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [SCRUM-10] - 2026-07-25
+
+### Added
+
+- Authentication REST API under `src/SCRUM_10/` with two endpoints:
+  - `POST /register`
+  - `POST /login`
+- In-memory user repository with normalized email uniqueness checks
+- Password hashing and verification utilities to prevent plaintext storage
+- Deterministic error contract for `400`, `401`, and `409` scenarios
+- Mock token provider abstraction for login success responses
+- SCRUM-10 test suite under `tests/SCRUM_10/` covering API behavior, service rules, error envelope consistency, and repository isolation
+- Full SDLC artifact chain for SCRUM-10 under `.sdlc/SCRUM-10/`
+
+### Changed
+
+- Pipeline stage tracking for SCRUM-10 advanced through requirements, architecture, design review, implementation plan, implementation, code review, and verify
+
+### Fixed
+
+- Enforced deterministic validation and credential failure response shape at API boundary
+- Ensured password values are never returned in response payloads
+
+### Known Limitations
+
+- Authentication uses temporary mock tokens (no production JWT signing in this story)
+- User data persists only in-memory and resets on restart
+- Out-of-scope auth features remain unimplemented (profile, reset, email verification, logout, refresh tokens)
+
+---
+
 ## [SCRUM-9] - 2026-06-24
 
 ### Added
