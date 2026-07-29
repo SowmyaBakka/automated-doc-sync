@@ -13,20 +13,6 @@ formal design review.
 
 When given a JIRA issue key (referred to as {ISSUE_KEY}):
 
-═══════════════════════════════════
-BRANCH RULE:
-- Derive branch name as: feature/{ISSUE_KEY_LOWERCASE}
-  e.g. SCRUM-6 → feature/scrum-6
-- If branch does not exist, create it from main first
-- Never commit directly to main
-
-FOLDER RULE:
-- All files live under .sdlc/{ISSUE_KEY}/
-- Always read files from .sdlc/{ISSUE_KEY}/
-- Always save files to .sdlc/{ISSUE_KEY}/
-- Never read or write to the project root
-═══════════════════════════════════
-
 STEPS:
 
 1. Read .sdlc/{ISSUE_KEY}/requirements.md
@@ -77,13 +63,15 @@ STEPS:
    - Save design-review.md to .sdlc/{ISSUE_KEY}/
    - Save updated architecture.md to .sdlc/{ISSUE_KEY}/
      (only if changes were made)
-   - Checkout or create feature/{ISSUE_KEY_LOWERCASE}
-   - Stage and commit with message:
+    - Save/update .sdlc/{ISSUE_KEY}/pipeline-state.json with:
+       * issueKey: {ISSUE_KEY}
+       * currentStage: design-review
+       * status: completed
+       * approved: true
+       * lastAgent: sdlc-design-review-agent
+       * artifacts.design-review: .sdlc/{ISSUE_KEY}/design-review.md
+       * updatedAt: current UTC timestamp
+   - Commit with message:
      "feat: add design review for {ISSUE_KEY}"
-   - Push to feature/{ISSUE_KEY_LOWERCASE}
-   - Notify: "design-review.md committed to
-     feature/{ISSUE_KEY_LOWERCASE} 
-     under .sdlc/{ISSUE_KEY}/"
-
-Never commit to main.
-Never commit without user confirmation in Step 6.
+       Include design-review.md, pipeline-state.json, and architecture.md if it changed.
+   - Output: "SDLC_NEXT: {ISSUE_KEY}"

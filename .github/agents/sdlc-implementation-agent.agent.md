@@ -13,20 +13,6 @@ an approved plan.
 
 When given a JIRA issue key (referred to as {ISSUE_KEY}):
 
-═══════════════════════════════════
-BRANCH RULE:
-- Always work on: feature/{ISSUE_KEY_LOWERCASE}
-  e.g. SCRUM-6 → feature/scrum-6
-- If branch does not exist, create it from main first
-- Never commit directly to main
-
-FOLDER RULE:
-- Read SDLC docs from .sdlc/{ISSUE_KEY}/
-- Write all code files to their natural locations
-  in the repo (not inside .sdlc/)
-  e.g. .github/workflows/, src/, tests/, docs/
-═══════════════════════════════════
-
 STEPS:
 
 1. Read .sdlc/{ISSUE_KEY}/impl-plan.md
@@ -38,7 +24,7 @@ STEPS:
 3. Read .sdlc/{ISSUE_KEY}/architecture.md
    - If not found, notify the user and stop.
 
-4. Identify all tasks in dependency order.
+4. Identify all tasks in dependency order:
    - Skip any tasks marked as Blocked
    - Start from Phase 1: Setup
    - Never start a task before its dependencies 
@@ -54,10 +40,10 @@ STEPS:
 
    b. Implement the task:
       - Write all code, config, or files needed
-      - Follow the architecture decisions exactly
+      - Follow architecture decisions exactly
       - Follow all requirements from requirements.md
-      - Use Python for sync logic
-      - Use GitHub Actions YAML for workflows
+      - Infer technology stack from architecture.md
+        (do not assume Python or any specific language)
       - Write clean, readable, well-commented code
 
    c. Show a summary of changes made:
@@ -73,10 +59,9 @@ STEPS:
        NO to revise, or SKIP to skip this task."
 
    e. On YES:
-      - Stage and commit with message:
+      - Commit with message:
         "feat: implement TASK-XX [Title] for 
         {ISSUE_KEY}"
-      - Push to feature/{ISSUE_KEY_LOWERCASE}
       - Notify: "TASK-XX committed. Moving to 
         next task."
 
@@ -89,13 +74,38 @@ STEPS:
       - Note the task as skipped
       - Move to next task
 
-6. After all tasks are complete, show a summary:
+6. After all tasks are complete, generate 
+   .sdlc/{ISSUE_KEY}/implementation-summary.md with:
+   - Completed TASK IDs
+   - Skipped TASK IDs
+   - Blocked TASK IDs
+   - Short implementation notes
+
+7. Show a preview of implementation-summary.md and ask:
+   "Shall I commit implementation-summary.md and
+   pipeline-state.json to feature/{ISSUE_KEY_LOWERCASE}
+   so code review can start?"
+
+8. On YES:
+   - Save/update .sdlc/{ISSUE_KEY}/pipeline-state.json with:
+     * issueKey: {ISSUE_KEY}
+     * currentStage: implementation
+     * status: completed
+     * approved: true
+     * lastAgent: sdlc-implementation-agent
+     * artifacts.implementation: .sdlc/{ISSUE_KEY}/implementation-summary.md
+     * updatedAt: current UTC timestamp
+   - Commit with message:
+     "feat: complete implementation stage for {ISSUE_KEY}"
+     Include implementation-summary.md and pipeline-state.json in the same commit.
+
+9. After that handoff commit, show a summary 
+   and output handoff:
    "Implementation complete for {ISSUE_KEY}:
     ✅ Completed: [list of TASK IDs]
     ⏭️ Skipped: [list of TASK IDs]
-    ❌ Blocked: [list of TASK IDs]
-    
-    Next step: Run sdlc-review-agent for SCRUM-6"
+    ❌ Blocked: [list of TASK IDs]"
+   - Output: "SDLC_NEXT: {ISSUE_KEY}"
 
 Never commit to main.
 Never implement multiple tasks at once.

@@ -1,48 +1,62 @@
 {
-  "version": 1,
-  "rules": [
+  "version": 2,
+  "stateFileName": "pipeline-state.json",
+  "stages": [
     {
-      "id": "requirements_to_architecture",
-      "triggerCommitRegex": "^feat: add requirements for (?<issue>[A-Z]+-\\d+)$",
+      "id": "requirements",
+      "completionArtifact": "requirements.md",
       "agent": "sdlc-architecture-agent",
-      "promptTemplate": "Design the architecture for {ISSUE_KEY}"
+      "promptTemplate": "Design the architecture for {ISSUE_KEY}",
+      "nextStage": "architecture"
     },
     {
-      "id": "architecture_to_design_review",
-      "triggerCommitRegex": "^feat: add architecture for (?<issue>[A-Z]+-\\d+)$",
+      "id": "architecture",
+      "completionArtifact": "architecture.md",
       "agent": "sdlc-design-review-agent",
-      "promptTemplate": "Review the architecture for {ISSUE_KEY}"
+      "promptTemplate": "Review the architecture for {ISSUE_KEY}",
+      "nextStage": "design-review"
     },
     {
-      "id": "design_review_to_impl_plan",
-      "triggerCommitRegex": "^feat: add design review for (?<issue>[A-Z]+-\\d+)$",
+      "id": "design-review",
+      "completionArtifact": "design-review.md",
       "agent": "sdlc-impl-plan-agent",
-      "promptTemplate": "Generate the implementation plan for {ISSUE_KEY}"
+      "promptTemplate": "Generate the implementation plan for {ISSUE_KEY}",
+      "nextStage": "impl-plan"
     },
     {
-      "id": "impl_plan_to_implementation",
-      "triggerCommitRegex": "^feat: add implementation plan for (?<issue>[A-Z]+-\\d+)$",
+      "id": "impl-plan",
+      "completionArtifact": "impl-plan.md",
       "agent": "sdlc-implementation-agent",
-      "promptTemplate": "Implement {ISSUE_KEY}"
+      "promptTemplate": "Implement {ISSUE_KEY}",
+      "nextStage": "implementation"
     },
     {
-      "id": "implementation_to_code_review",
-      "triggerCommitRegex": "^feat: implement TASK-",
+      "id": "implementation",
+      "completionArtifact": "implementation-summary.md",
       "agent": "sdlc-code-review-agent",
       "promptTemplate": "Review the implementation for {ISSUE_KEY}",
-      "condition": "allTasksImplemented"
+      "nextStage": "code-review"
     },
     {
-      "id": "code_review_to_verify",
-      "triggerCommitRegex": "^feat: add code review for (?<issue>[A-Z]+-\\d+)$",
+      "id": "code-review",
+      "completionArtifact": "code-review.md",
       "agent": "sdlc-verify-agent",
-      "promptTemplate": "Verify the implementation for {ISSUE_KEY}"
+      "promptTemplate": "Verify the implementation for {ISSUE_KEY}",
+      "nextStage": "verify"
     },
     {
-      "id": "verify_to_pr",
-      "triggerCommitRegex": "^feat: add verification report for (?<issue>[A-Z]+-\\d+)$",
+      "id": "verify",
+      "completionArtifact": "verify.md",
       "agent": "sdlc-pr-agent",
-      "promptTemplate": "Raise the PR for {ISSUE_KEY}"
+      "promptTemplate": "Raise the PR for {ISSUE_KEY}",
+      "nextStage": "pr"
+    },
+    {
+      "id": "pr",
+      "completionArtifact": "pr-description.md",
+      "agent": "sdlc-pr-agent",
+      "promptTemplate": "Raise the PR for {ISSUE_KEY}",
+      "nextStage": null
     }
   ]
 }

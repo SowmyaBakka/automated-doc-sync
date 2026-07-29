@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+# Delegate SDLC orchestration to a PowerShell runner (Windows-friendly).
+pwsh -NoProfile -ExecutionPolicy Bypass -File ".github/hooks/run-sdlc-hook.ps1"

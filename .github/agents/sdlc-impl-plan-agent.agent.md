@@ -13,30 +13,6 @@ implementation plan.
 
 When given a JIRA issue key (referred to as {ISSUE_KEY}):
 
-═══════════════════════════════════
-BRANCH RULE:
-- Derive branch name as: feature/{ISSUE_KEY_LOWERCASE}
-  e.g. SCRUM-6 → feature/scrum-6
-- If branch does not exist, create it from main first
-- Never commit directly to main
-
-FOLDER RULE:
-- Read all SDLC docs from: .sdlc/{ISSUE_KEY}/
-- Save impl-plan.md to: .sdlc/{ISSUE_KEY}/
-- Never read or write to the project root
-
-CODE STRUCTURE RULE:
-- When referencing file paths inside tasks, 
-  always use story-scoped paths:
-    * Source code → src/{ISSUE_KEY}/
-    * Tests → tests/{ISSUE_KEY}/
-    * Workflows → .github/workflows/{ISSUE_KEY}/
-    * Docs → docs/{ISSUE_KEY}/
-- Never reference root-level paths in any task
-- Always derive paths from {ISSUE_KEY}
-  e.g. src/{ISSUE_KEY}/sync.py NOT src/sync.py
-═══════════════════════════════════
-
 STEPS:
 
 1. Read .sdlc/{ISSUE_KEY}/requirements.md
@@ -66,7 +42,8 @@ STEPS:
    - Task ID: TASK-01, TASK-02... (sequential)
    - Title: short descriptive name
    - Description: what needs to be built/done
-   - File paths: always use src/{ISSUE_KEY}/ structure
+   - File paths: always use story-scoped paths
+     e.g. src/{ISSUE_KEY_SAFE}/ NOT src/
    - Depends on: Task IDs that must complete first 
      (or "None")
    - Blocked: Yes/No — if Yes, explain why
@@ -80,7 +57,6 @@ STEPS:
    - Derive tasks from architecture components 
      and FR/NFR requirements
    - Do not hardcode tasks — infer from documents
-   - All file paths must use {ISSUE_KEY} scoping
 
 5. Show a preview of impl-plan.md to the user and ask:
    "Shall I commit this to 
@@ -88,13 +64,15 @@ STEPS:
 
 6. On user confirmation:
    - Save to .sdlc/{ISSUE_KEY}/impl-plan.md
-   - Checkout or create feature/{ISSUE_KEY_LOWERCASE}
-   - Stage and commit with message:
+   - Save/update .sdlc/{ISSUE_KEY}/pipeline-state.json with:
+     * issueKey: {ISSUE_KEY}
+     * currentStage: impl-plan
+     * status: completed
+     * approved: true
+     * lastAgent: sdlc-impl-plan-agent
+     * artifacts.impl-plan: .sdlc/{ISSUE_KEY}/impl-plan.md
+     * updatedAt: current UTC timestamp
+   - Commit with message:
      "feat: add implementation plan for {ISSUE_KEY}"
-   - Push to feature/{ISSUE_KEY_LOWERCASE}
-   - Notify: "impl-plan.md committed to
-     feature/{ISSUE_KEY_LOWERCASE} 
-     under .sdlc/{ISSUE_KEY}/"
-
-Never commit to main.
-Never commit without user confirmation in Step 5.
+     Include both impl-plan.md and pipeline-state.json in the same commit.
+   - Output: "SDLC_NEXT: {ISSUE_KEY}"

@@ -1,0 +1,18 @@
+{
+  "issueKey": "SCRUM-9",
+  "currentStage": "pr",
+  "status": "completed",
+  "approved": true,
+  "lastAgent": "sdlc-pr-agent",
+  "artifacts": {
+    "requirements": ".sdlc/SCRUM-9/requirements.md",
+    "architecture": ".sdlc/SCRUM-9/architecture.md",
+    "design-review": ".sdlc/SCRUM-9/design-review.md",
+    "impl-plan": ".sdlc/SCRUM-9/impl-plan.md",
+    "implementation": ".sdlc/SCRUM-9/implementation-summary.md",
+    "code-review": ".sdlc/SCRUM-9/code-review.md",
+    "verify": ".sdlc/SCRUM-9/verify.md",
+    "pr": ".sdlc/SCRUM-9/pr-description.md"
+  },
+  "updatedAt": "2026-07-25T00:00:00Z"
+}
